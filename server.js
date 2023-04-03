@@ -404,7 +404,7 @@ app.post("/login", (req, res) => {
         email: user.email,
         loginHistory: user.loginHistory,
       };
-      res.redirect("/employees");
+      res.redirect("/students");
     })
     .catch((err) => {
       res.render("login", { errorMessage: err, userName: req.body.userName });

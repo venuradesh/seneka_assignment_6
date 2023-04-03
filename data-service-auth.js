@@ -8,7 +8,7 @@ const userSchema = new Schema({
   },
   password: String,
   email: String,
-  loginHistory: [{ dateTime: Date }, { userAgent: String }],
+  loginHistory: [{ dateTime: Date, userAgent: String }],
 });
 
 let User;
@@ -61,7 +61,7 @@ module.exports.checkUser = (userData) => {
           reject(`Incorrect password for the user: ${userData.userName}`);
         }
 
-        users[0].loginHistory.push({ dataTime: new Date().toString(), userAgent: userData.userAgent });
+        users[0].loginHistory.push({ dateTime: new Date().toString(), userAgent: userData.userAgent });
         User.updateOne({ userName: users[0].userName }, { $set: { loginHistory: users[0].loginHistory } })
           .exec()
           .then(() => {

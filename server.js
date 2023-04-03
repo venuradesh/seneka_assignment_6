@@ -1,7 +1,8 @@
-const dataServiceAuth = require("./data-service.js");
 const express = require("express");
 const path = require("path");
+const dataServiceAuth = require("./data-service-auth.js");
 const data = require("./data-service.js");
+const clientSessions = require("client-sessions");
 // const bodyParser = require('body-parser');
 const fs = require("fs");
 const multer = require("multer");
@@ -14,9 +15,9 @@ const app = express();
 const HTTP_PORT = process.env.PORT || 8080;
 
 cloudinary.config({
-  cloud_name: "Cloud Name",
-  api_key: "API Key",
-  api_secret: "API Secret",
+  cloud_name: "djuaaifvl",
+  api_key: "347159416534861",
+  api_secret: "DKKBatoiLGDdZ4uOHHA966F4cqY",
   secure: true,
 });
 
@@ -50,6 +51,29 @@ app.use(express.static("public"));
 // app.use(bodyParser.urlencoded({ extended: true }));
 app.use(express.urlencoded({ extended: true }));
 
+app.use(
+  clientSessions({
+    cookieName: "session",
+    secret: "sessionsecret",
+    duration: 24 * 60 * 60 * 1000,
+    activeDuration: 1000 * 60,
+  })
+);
+
+app.use(function (req, res, next) {
+  res.locals.session = req.session;
+  next();
+});
+
+//ensures that the user is logged in or not
+function ensureLogin(req, res, next) {
+  if (!req.session.user) {
+    res.redirect("/login");
+  } else {
+    next();
+  }
+}
+
 app.use(function (req, res, next) {
   let route = req.baseUrl + req.path;
   app.locals.activeRoute = route == "/" ? "/" : route.replace(/\/$/, "");
@@ -60,13 +84,21 @@ app.get("/", (req, res) => {
   res.render("home");
 });
 
+app.get("/login", (req, res) => {
+  res.render("login");
+});
+
+app.get("/register", (req, res) => {
+  res.render("register");
+});
+
 app.get("/about", (req, res) => {
   res.render("about");
 });
 
-// // routes for students
+// routes for students
 
-app.get("/students/add", (req, res) => {
+app.get("/students/add", ensureLogin, (req, res) => {
   data
     .getPrograms()
     .then((data) => {
@@ -78,7 +110,7 @@ app.get("/students/add", (req, res) => {
     });
 });
 
-app.post("/students/add", (req, res) => {
+app.post("/students/add", ensureLogin, (req, res) => {
   data
     .addStudent(req.body)
     .then(() => {
@@ -90,7 +122,7 @@ app.post("/students/add", (req, res) => {
     }); ///
 });
 
-app.get("/students", (req, res) => {
+app.get("/students", ensureLogin, (req, res) => {
   if (req.query.status) {
     data
       .getStudentsByStatus(req.query.status)
@@ -130,7 +162,7 @@ app.get("/students", (req, res) => {
   }
 });
 
-app.get("/student/:studentId", (req, res) => {
+app.get("/student/:studentId", ensureLogin, (req, res) => {
   // initialize an empty object to store the values
   let viewData = {};
 
@@ -175,13 +207,13 @@ app.get("/student/:studentId", (req, res) => {
     });
 });
 
-app.get("/intlstudents", (req, res) => {
+app.get("/intlstudents", ensureLogin, (req, res) => {
   data.getInternationalStudents().then((data) => {
     res.json(data);
   });
 });
 
-app.post("/student/update", (req, res) => {
+app.post("/student/update", ensureLogin, (req, res) => {
   data
     .updateStudent(req.body)
     .then(() => {
@@ -193,7 +225,7 @@ app.post("/student/update", (req, res) => {
     });
 });
 
-app.get("/students/delete/:sid", (req, res) => {
+app.get("/students/delete/:sid", ensureLogin, (req, res) => {
   /// new in a5
   data
     .deleteStudentById(req.params.sid)
@@ -207,7 +239,7 @@ app.get("/students/delete/:sid", (req, res) => {
 
 // routes for images:
 
-app.get("/images/add", (req, res) => {
+app.get("/images/add", ensureLogin, (req, res) => {
   res.render("addImage");
 });
 
@@ -269,7 +301,7 @@ app.post("/images/add", upload.single("imageFile"), (req, res) => {
   // res.redirect("/images");
 });
 
-app.get("/images", (req, res) => {
+app.get("/images", ensureLogin, (req, res) => {
   data
     .getImages()
     .then((data) => {
@@ -282,12 +314,12 @@ app.get("/images", (req, res) => {
 
 // routes for programs:
 
-app.get("/programs/add", (req, res) => {
+app.get("/programs/add", ensureLogin, (req, res) => {
   /// new in a5
   res.render("addProgram");
 });
 
-app.post("/programs/add", (req, res) => {
+app.post("/programs/add", ensureLogin, (req, res) => {
   /// new in a5
   data
     .addProgram(req.body)
@@ -299,7 +331,7 @@ app.post("/programs/add", (req, res) => {
     });
 });
 
-app.get("/programs", (req, res) => {
+app.get("/programs", ensureLogin, (req, res) => {
   data
     .getPrograms()
     .then((data) => {
@@ -310,7 +342,7 @@ app.get("/programs", (req, res) => {
     });
 });
 
-app.get("/program/:programCode", (req, res) => {
+app.get("/program/:programCode", ensureLogin, (req, res) => {
   /// new in a5
   data
     .getProgramByCode(req.params.programCode)
@@ -326,7 +358,7 @@ app.get("/program/:programCode", (req, res) => {
     });
 });
 
-app.post("/program/update", (req, res) => {
+app.post("/program/update", ensureLogin, (req, res) => {
   /// new in a5
   data
     .updateProgram(req.body)
@@ -338,7 +370,7 @@ app.post("/program/update", (req, res) => {
     });
 });
 
-app.get("/programs/delete/:programCode", (req, res) => {
+app.get("/programs/delete/:programCode", ensureLogin, (req, res) => {
   /// new in a5
   data
     .deleteProgramByCode(req.params.programCode)
@@ -350,12 +382,51 @@ app.get("/programs/delete/:programCode", (req, res) => {
     });
 });
 
+//register and login
+app.post("/register", (req, res) => {
+  dataServiceAuth
+    .registerUser(req.body)
+    .then(() => {
+      res.render("register", { successMessage: "User Created" });
+    })
+    .catch((err) => {
+      res.render("register", { errorMessage: err, userName: req.body.userName });
+    });
+});
+
+app.post("/login", (req, res) => {
+  req.body.userAgent = req.get("User-Agent");
+  dataServiceAuth
+    .checkUser(req.body)
+    .then((user) => {
+      req.session.user = {
+        userName: user.userName,
+        email: user.email,
+        loginHistory: user.loginHistory,
+      };
+      res.redirect("/employees");
+    })
+    .catch((err) => {
+      res.render("login", { errorMessage: err, userName: req.body.userName });
+    });
+});
+
+app.get("/logout", (req, res) => {
+  req.session.reset();
+  res.redirect("/");
+});
+
+app.get("/userHistory", ensureLogin, (req, res) => {
+  res.render("userHistory");
+});
+
 app.use((req, res) => {
   res.status(404).send("Page Not Found");
 });
 
 data
   .initialize()
+  .then(dataServiceAuth.initialize)
   .then(function () {
     app.listen(HTTP_PORT, function () {
       console.log("app listening on: " + HTTP_PORT);
